@@ -17,7 +17,7 @@ implements that idea as an R simulation with an interactive interface.
 ## Clone and set up
 
 ```sh
-git clone YOUR_REPOSITORY_URL community-assembly
+git clone git@github.com:speckerf/community-assembly.git
 cd community-assembly
 Rscript -e 'install.packages("shiny", repos = "https://cloud.r-project.org")'
 ```
