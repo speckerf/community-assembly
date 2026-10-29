@@ -49,8 +49,7 @@ ui <- fluidPage(
             numericInput("seconds", "Seconds / generation", 1, min = 0.1, max = 30, step = 0.1)),
         div(class = "play-controls", actionButton("go", "Go ▶", class = "btn-go"),
             actionButton("stop", "Stop", class = "btn-stop")),
-        actionButton("go_skip", "Go — skip animations", class = "btn-step"),
-        p(class = "hint", "Each generation: half the time for deaths, half for births. Stop keeps completed generations.")
+        actionButton("go_skip", "Go — skip animations", class = "btn-step")
       ),
       tags$main(class = "simulation-panel",
         uiOutput("status"),
