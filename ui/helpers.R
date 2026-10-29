@@ -7,7 +7,7 @@ start_interactive_run <- function(config, model) {
 advance_interactive_run <- function(result) {
   with_simulation_seed(result$config$seed, function() {
     assign(".Random.seed", result$metadata$rng_state, envir = .GlobalEnv)
-    recruitment <- if (result$model == "neutral") recruit_neutral else recruit_niche
+    recruitment <- recruitment_function(result$model)
     state <- step_community(list(grid = tail(result$snapshots, 1)[[1]], affinities = result$affinities),
                             result$config, recruitment)
     generation <- length(result$snapshots)

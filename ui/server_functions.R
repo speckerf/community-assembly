@@ -1,4 +1,24 @@
 simulation_server <- function(input, output, session) {
+  show_birth_rules <- function(title, rules) {
+    showModal(modalDialog(
+      title = title, rules,
+      easyClose = TRUE, footer = modalButton("Close")
+    ))
+  }
+  observeEvent(input$info_random, show_birth_rules("neutral - fully random", tagList(
+    p("For each empty cell, choose one species at random with equal probability from the eligible species pool."),
+    p("Neighbors, species abundances, and habitat preferences do not affect the choice.")
+  )))
+  observeEvent(input$info_neutral, show_birth_rules("neutral - favor adjacent", tagList(
+    p("Each occupied neighbor above, below, left, or right contributes one recruitment ticket. Add one immigration ticket. Choose a ticket with equal probability."),
+    p("A neighbor ticket supplies that neighbor's species. An immigration ticket draws a species uniformly from the eligible pool."),
+    p("Empty neighbors and positions outside the grid contribute no tickets. With two occupied neighbors, each neighbor and immigration have a 1/3 chance. Repeated species get one ticket per neighboring individual.")
+  )))
+  observeEvent(input$info_niche, show_birth_rules("niche-based", tagList(
+    p("Collect one candidate from each occupied orthogonal neighbor and add one immigrant species drawn uniformly from the eligible pool."),
+    p("If the cell's habitat-preferred species appears among these candidates, it always wins. Otherwise, choose one candidate ticket with equal probability."),
+    p("Duplicate species keep their separate tickets. For example, candidates A, A, and B give A a 2/3 chance and B a 1/3 chance unless the habitat preference decides the winner.")
+  )))
   run <- reactiveVal(NULL)
   running <- reactiveVal(FALSE)
   remaining <- reactiveVal(0L)
@@ -8,7 +28,13 @@ simulation_server <- function(input, output, session) {
   animate_cells <- reactiveVal(TRUE)
 
   cancel_playback <- function() {
-    running(FALSE); remaining(0L); pending(NULL); phase("ready")
+    running(FALSE); remaining(0L); pending(NULL)
+    # Keep the final birth frame intact: changing phase here would rebuild the
+    # board and replay its CSS recruitment animation a second time.
+    if (phase() == "death") {
+      animate_cells(FALSE)
+      phase("ready")
+    }
   }
   displayed_grid <- reactive({
     req(run())
@@ -40,10 +66,11 @@ simulation_server <- function(input, output, session) {
   }
   observeEvent(input$restart_neutral, initialize("neutral"))
   observeEvent(input$restart_niche, initialize("niche"))
+  observeEvent(input$restart_random, initialize("fully_random"))
 
   start_playback <- function(count) {
     if (is.null(run())) {
-      showNotification("Initialize a neutral or niche-based community first.", type = "message")
+      showNotification("Initialize a community first.", type = "message")
       return()
     }
     if (running()) return()
@@ -51,14 +78,14 @@ simulation_server <- function(input, output, session) {
       count <- ui_number(count, "Iterations", 1, 10000)
       seconds <- ui_number(input$seconds, "Seconds per generation", 0.1, 30, integer = FALSE)
       animate_cells(TRUE)
-      remaining(count); interval(seconds * 1000); phase("ready"); running(TRUE)
+      remaining(count); interval(seconds * 1000); running(TRUE)
     }, error = report_error)
   }
   observeEvent(input$step, start_playback(1L))
   observeEvent(input$go, start_playback(input$iterations))
   observeEvent(input$go_skip, {
     if (is.null(run())) {
-      showNotification("Initialize a neutral or niche-based community first.", type = "message")
+      showNotification("Initialize a community first.", type = "message")
       return()
     }
     if (running()) return()
@@ -97,7 +124,7 @@ simulation_server <- function(input, output, session) {
   output$status <- renderUI({
     result <- run()
     if (is.null(result)) return(div(class = "status-row", h2("Your community starts here"), span(class = "badge", "Not initialized")))
-    div(class = "status-row", div(h2(if (result$model == "neutral") "Neutral assembly" else "Niche-based assembly"),
+    div(class = "status-row", div(h2(switch(result$model, neutral = "neutral - favor adjacent", niche = "niche-based", fully_random = "neutral - fully random")),
          p(class = "hint", if (running()) paste(if (phase() == "death") "Death phase · vacancies" else "Birth phase · established", "·", remaining(), "generations remaining") else "Ready to explore")),
         span(class = "badge", paste("Generation", length(result$snapshots) - 1L)))
   })
@@ -128,7 +155,7 @@ simulation_server <- function(input, output, session) {
   })
   output$affinity <- renderUI({
     req(run()); result <- run()
-    if (is.null(result$affinities)) return(p(class = "hint", "Neutral assembly has no habitat preference."))
+    if (is.null(result$affinities)) return(p(class = "hint", "This process has no habitat preference."))
     div(class = "affinity-card", h3("Habitat preferences"),
         p(class = "hint", "Fixed adjacent pairs. A preferred species always wins when present among recruitment candidates."),
         community_grid(result$affinities, species_colors(result$species_ids), label = "Niche preferences"))
@@ -145,8 +172,4 @@ simulation_server <- function(input, output, session) {
     }))
   })
   output$history <- renderTable({ req(run()); run()$community[, c("generation", "richness", "min_abundance", "max_abundance", "mean_frequency")] }, digits = 3)
-  output$download <- downloadHandler(
-    filename = function() paste0("community-", run()$model, "-generation-", length(run()$snapshots) - 1L, ".rds"),
-    content = function(file) { req(run()); saveRDS(run(), file) }
-  )
 }

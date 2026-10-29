@@ -25,7 +25,6 @@ h3 { font-size: 16px; }
 .btn-go { flex: 2; background: var(--green); border-color: var(--green); color: white; }
 .btn-go:hover, .btn-go:focus { background: #183f2c; color: white; }
 .btn-stop { flex: 1; background: transparent; border-color: var(--line); }
-.download-run { width: 100%; background: transparent; border: 1px solid var(--line); margin-top: 10px; }
 .status-row { display: flex; justify-content: space-between; align-items: center; min-height: 70px; gap: 12px; }
 .status-row .hint { margin-bottom: 12px; }
 .badge { background: #e3eadc; color: var(--green); padding: 10px 14px; border-radius: 20px; font-size: 12px; }
@@ -57,3 +56,7 @@ h3 { font-size: 16px; }
 .grid-cell.vacant { background: #f0f1e9; border: 1px dashed #a5b29d; }
 
 .no-animation .grid-cell { animation: none; }
+.scenario-controls { display: flex; align-items: stretch; gap: 7px; margin-bottom: 8px; }
+.scenario-controls .btn-model { flex: 1; min-width: 0; margin-bottom: 0; }
+.scenario-info { flex: 0 0 36px; padding: 6px; color: var(--green); background: transparent; border-color: var(--line); }
+.scenario-info:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }

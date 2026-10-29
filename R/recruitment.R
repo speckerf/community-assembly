@@ -57,3 +57,22 @@ empty_recruitment <- function(config, preferred = NA_character_) {
        immigrant = NA_character_, selected_ticket = NA_integer_, preferred = preferred,
        preference_applied = FALSE)
 }
+
+recruitment_function <- function(model) {
+  switch(model, neutral = recruit_neutral, niche = recruit_niche,
+         fully_random = recruit_fully_random, stop("Unknown model: ", model))
+}
+
+# Equal probability per eligible species, regardless of abundance or weights.
+recruit_fully_random <- function(neighbors, config, preferred = NULL) {
+  pool <- config$eligible_species
+  if (is.null(pool)) pool <- config$species_ids
+  if (!length(pool)) return(empty_recruitment(config))
+  ticket <- sample.int(length(pool), 1L)
+  probabilities <- setNames(rep(0, config$n_species), config$species_ids)
+  probabilities[pool] <- 1 / length(pool)
+  list(species = pool[ticket], candidates = pool,
+       ticket_probabilities = rep(1 / length(pool), length(pool)),
+       species_probabilities = probabilities, immigrant = pool[ticket],
+       selected_ticket = ticket, preferred = NA_character_, preference_applied = FALSE)
+}

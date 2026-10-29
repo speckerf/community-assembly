@@ -6,7 +6,7 @@ source("ui/server_functions.R")
 # Incremental playback must be identical to a batch run, including RNG state.
 set.seed(72)
 before <- .Random.seed
-for (model in c("neutral", "niche")) {
+for (model in c("neutral", "niche", "fully_random")) {
   config <- simulation_config(seed = 2026)
   interactive_run <- start_interactive_run(config, model)
   for (i in seq_len(config$n_rounds)) interactive_run <- advance_interactive_run(interactive_run)
@@ -28,8 +28,17 @@ testServer(simulation_server, {
   stopifnot(phase() == "death", length(run()$snapshots) == 1)
   session$elapse(1)
   stopifnot(phase() == "birth", !anyNA(displayed_grid()), length(run()$snapshots) == 2)
+  # Completing the birth interval must not invalidate the board a second time.
+  board_updates <- new.env(); board_updates$count <- 0L
+  board_watch <- observe({
+    run(); phase(); animate_cells(); displayed_grid()
+    board_updates$count <- board_updates$count + 1L
+  })
+  session$flushReact()
+  before_finish <- board_updates$count
   session$elapse(50)
-  stopifnot(!running())
+  stopifnot(!running(), phase() == "birth", board_updates$count == before_finish)
+  board_watch$destroy()
   session$setInputs(go = 1)
   stopifnot(phase() == "death", length(run()$snapshots) == 2, remaining() == 3)
   session$elapse(50)
@@ -70,6 +79,14 @@ testServer(simulation_server, {
   stopifnot(all(is.na(displayed_grid())), all(tail(run()$species$abundance, 2) == 0))
   session$setInputs(allow_extinction = FALSE, rows = 6, cols = 6, species_count = 6,
                     deaths = 9, restart_niche = 4)
+  session$setInputs(restart_random = 1, iterations = 3, seconds = .1)
+  stopifnot(run()$model == "fully_random", is.null(run()$affinities))
+  session$setInputs(go_skip = 4)
+  stopifnot(isTRUE(all.equal(run(), run_simulation(simulation_config(n_rounds = 3, seed = 2026), "fully_random"))))
+  session$setInputs(step = 3)
+  session$elapse(100)
+  stopifnot(isTRUE(all.equal(run(), run_simulation(simulation_config(n_rounds = 4, seed = 2026), "fully_random"))))
+  session$setInputs(restart_niche = 5)
   # Invalid restart preserves the existing run, and stops playback.
   session$setInputs(rows = 3, cols = 3, restart_niche = 2)
   stopifnot(run()$config$n_rows == 6, run()$model == "niche")

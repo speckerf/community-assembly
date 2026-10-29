@@ -29,6 +29,7 @@ step_community <- function(state, config, recruitment_fn) {
   if (isTRUE(config$allow_extinction)) {
     alive <- unique(as.vector(death$grid[!is.na(death$grid)]))
     recruitment_config$immigrant_weights[!config$species_ids %in% alive] <- 0
+    recruitment_config$eligible_species <- config$species_ids[config$species_ids %in% alive]
   }
   # Also retry vacancies that could not recruit in an earlier round.
   vacancies <- which(is.na(death$grid), arr.ind = TRUE)
@@ -37,7 +38,7 @@ step_community <- function(state, config, recruitment_fn) {
        events = list(deaths = death$deaths, births = birth$births))
 }
 
-run_simulation <- function(config = simulation_config(), model = c("neutral", "niche"),
+run_simulation <- function(config = simulation_config(), model = c("neutral", "niche", "fully_random"),
                            initial_grid = NULL, affinities = NULL) {
   model <- match.arg(model)
   config <- validate_config(config)
@@ -62,7 +63,7 @@ run_simulation <- function(config = simulation_config(), model = c("neutral", "n
       validate_affinities(affinities, config)
       config$affinity_counts <- setNames(species_frequencies(affinities, config$species_ids)$abundance, config$species_ids)
     } else if (!is.null(affinities)) stop("Affinities are only used by the niche model")
-    recruitment_fn <- if (model == "neutral") recruit_neutral else recruit_niche
+    recruitment_fn <- recruitment_function(model)
     state <- list(grid = initial_grid, affinities = affinities)
     snapshots <- vector("list", config$n_rounds + 1L)
     snapshots[[1]] <- initial_grid

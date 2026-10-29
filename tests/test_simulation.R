@@ -84,3 +84,21 @@ stopifnot(recruit_neutral("oak", cfg)$species == "oak",
           all(neutral_probabilities(character(), cfg) == 0))
 expect_error(simulation_config(allow_extinction = NA))
 cat("All extinction checks passed.\n")
+
+# Fully random recruitment ignores neighbor abundance and configured weights.
+cfg <- simulation_config(species_ids = c("oak", "beech"), immigrant_weights = c(100, 0))
+draw <- recruit_fully_random(rep("oak", 4), cfg)
+stopifnot(all(draw$species_probabilities == .5))
+set.seed(10)
+a <- recruit_fully_random(rep("oak", 4), cfg)
+set.seed(10)
+b <- recruit_fully_random(character(), cfg)
+stopifnot(identical(a, b))
+cfg <- simulation_config(n_rows = 1, n_cols = 2, species_ids = c("oak", "beech"),
+                         deaths_per_round = 1, n_rounds = 8, allow_extinction = TRUE)
+random <- run_simulation(cfg, "fully_random")
+lost <- random$events[[1]]$deaths$species_id
+stopifnot(is.null(random$affinities), all(vapply(random$snapshots[-1], function(g) !lost %in% g, logical(1))))
+cfg$deaths_per_round <- 2
+stopifnot(all(is.na(run_simulation(cfg, "fully_random")$snapshots[[9]])))
+cat("All fully random checks passed.\n")
