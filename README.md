@@ -60,3 +60,6 @@ settings and seed reproduces the same run. Niche layouts require an even number
 of grid cells because habitat preferences are assigned in adjacent pairs.
 
 See [the UI guide](ui/README.md) for additional details.
+
+<img width="1138" height="835" alt="image" src="https://github.com/user-attachments/assets/64cd4baa-0b54-4868-8a7a-f4c48ddc7af8" />
+
